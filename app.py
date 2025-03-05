@@ -1,4 +1,4 @@
-from flask import Flask, redirect, request, session, url_for, render_template
+from flask import Flask, redirect, request, session, url_for, render_template, jsonify
 from googleapiclient import discovery
 from oauth2client import file, client, tools
 import os
@@ -49,11 +49,13 @@ def index():
             continue  # Skip files where the user is not the owner
 
         file_name = file.get("name")
+        file_id = file.get("id")
         is_shared = file.get("shared", False)
         is_public = any(perm.get("role") == "reader" and perm.get("type") == "anyone" for perm in file.get("permissions", []))
 
         file_data.append({
             "name": file_name,
+            "id": file_id,
             "shared": is_shared,
             "public": is_public
         })
@@ -118,6 +120,34 @@ def check_sharing():
             feedback.append(f"File '{file_name}' is not shared.")
 
     return "<br>".join(feedback)
+
+@app.route("/remove-access")
+def remove_access():
+    file_id = request.args.get("fileId")
+    permission_id = request.args.get("permissionId")
+    credentials = get_credentials()
+    drive_service = discovery.build("drive", "v3", credentials=credentials)
+    drive_service.permissions().delete(fileId=file_id, permissionId=permission_id).execute()
+    return jsonify({"status": "success"})
+
+@app.route("/disable-link-sharing", methods=["POST"])
+def disable_link_sharing():
+    file_id = request.args.get("fileId")
+    if not file_id:
+        return jsonify({"status": "error", "message": "fileId is required"}), 400
+
+    credentials = get_credentials()
+    print(credentials)
+    if not credentials:
+        return jsonify({"status": "error", "message": "Authentication required"}), 401
+
+    drive_service = discovery.build("drive", "v3", credentials=credentials)
+    try:
+        # Remove "anyoneWithLink" permission
+        drive_service.permissions().delete(fileId=file_id, permissionId="anyoneWithLink").execute()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # For testing only

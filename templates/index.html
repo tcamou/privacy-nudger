@@ -19,12 +19,24 @@
                         <li class="list-group-item">
                             <strong>{{ file.name }}</strong>
                             {% if file.shared %}
-                                <span class="badge bg-warning text-dark">Shared</span>
+                                <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" title="This file is shared with others.">Shared</span>
                                 {% if file.public %}
-                                    <span class="badge bg-danger">Public</span>
+                                    <span class="badge bg-danger" data-bs-toggle="tooltip" title="This file is publicly accessible via link.">Public</span>
                                 {% endif %}
+                                <button class="btn btn-sm btn-info" data-bs-toggle="collapse" data-bs-target="#details-{{ file.id }}">Details</button>
+                                <div id="details-{{ file.id }}" class="collapse mt-2">
+                                    <ul>
+                                        {% for perm in file.permissions %}
+                                            <li>
+                                                {{ perm.role }} access for {{ perm.emailAddress or "Anyone with the link" }}
+                                                <button class="btn btn-sm btn-danger" onclick="removeAccess('{{ file.id }}', '{{ perm.id }}')">Remove</button>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                    <button class="btn btn-sm btn-warning" onclick="disableLinkSharing('{{ file.id }}')">Disable Link Sharing</button>
+                                </div>
                             {% else %}
-                                <span class="badge bg-success">Private</span>
+                                <span class="badge bg-success" data-bs-toggle="tooltip" title="This file is private and not shared.">Private</span>
                             {% endif %}
                         </li>
                     {% endfor %}
@@ -33,7 +45,17 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS (optional) -->
+    <!-- Bootstrap JS (required for tooltips) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Your custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <!-- Initialize tooltips -->
+    <script>
+        // Enable tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    </script>
 </body>
 </html>
